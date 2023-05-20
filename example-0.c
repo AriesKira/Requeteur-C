@@ -14,7 +14,7 @@ struct apiRequest {
 };
 
 //fonction de gestion de la réponse
-size_t write_callback(void *contents, size_t size, size_t nmemb, char **response) {
+int write_callback(void *contents, size_t size, size_t nmemb, char **response) {
     size_t total_size = size * nmemb;
     *response = realloc(*response, strlen(*response) + total_size + 1);
     
@@ -24,8 +24,26 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, char **response
     }
     
     strncat(*response, (char*)contents, total_size);
+    
+    // Ajouter un retour à la ligne après chaque accolade ouvrante
+    char *brace_pos = strchr(*response, '{');
+    while (brace_pos != NULL) {
+        size_t brace_index = brace_pos - *response;
+        size_t response_length = strlen(*response);
+
+        // Décaler les caractères suivants pour faire de la place pour le retour à la ligne
+        memmove(*response + brace_index + 1, *response + brace_index, response_length - brace_index);
+
+        // Insérer le retour à la ligne
+        (*response)[brace_index] = '\n';
+
+        // Rechercher la prochaine accolade ouvrante
+        brace_pos = strchr(*response + brace_index + 2, '{');
+    }
+    
     return total_size;
 }
+
 
 
 void on_button_clicked(GtkWidget *widget, gpointer data) {
@@ -49,12 +67,16 @@ void on_button_clicked(GtkWidget *widget, gpointer data) {
     if(curl) {
       // Configurer la requête CURL
       curl_easy_setopt(curl, CURLOPT_URL, request);
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDS, requestArgs);
+      
       if (strcmp(method,"GET")==0) {
-          curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+        strcat((char *)request,"&");
+        strcat((char *)request,requestArgs);
+        curl_easy_setopt(curl, CURLOPT_URL, request);
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
       }
       else if (strcmp(method,"POST")==0) {
           curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+          curl_easy_setopt(curl, CURLOPT_POSTFIELDS, requestArgs);
       }
       else if (strcmp(method,"PATCH")==0) {
           curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
@@ -96,7 +118,7 @@ int main(int argc, char **argv) {
     apiRequest *apiStruct = malloc(sizeof(apiRequest));
 
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "Ma fenêtre GTK");
+    gtk_window_set_title(GTK_WINDOW(window), "requeteur d'api C");
     gtk_window_set_default_size(GTK_WINDOW(window), 300, 300);
 
     apiStruct->method = gtk_combo_box_text_new();
