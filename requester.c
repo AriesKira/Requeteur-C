@@ -28,6 +28,12 @@ void on_window_destroy(GtkWidget *widget, gpointer data) {
 void closeWindow(GtkWidget *widget, gpointer window) {
     gtk_widget_destroy(GTK_WIDGET(window));
 }
+gboolean closeSuccessWindow(GtkWidget *widget) {
+    gtk_widget_destroy(widget);
+    return G_SOURCE_REMOVE;
+}
+
+
 //-------------CURL AND API REQUEST FUNCTIONS----------------//
 
 //fonction de gestion de la réponse
@@ -60,7 +66,65 @@ int write_callback(void *contents, size_t size, size_t nmemb, char **response) {
     
     return total_size;
 }
+char* isSaved(const char* searchName) {
+    FILE* file = fopen(".apiSave", "r");
+    if (file == NULL) {
+        perror("Erreur lors de l'ouverture du fichier");
+        return NULL;
+    }
 
+    char line[256];
+    char* link = NULL;
+    int foundName = 0;
+
+    while (fgets(line, sizeof(line), file) != NULL) {
+        if (foundName) {
+            // Remove the trailing newline character, if present
+            char* newline = strchr(line, '\n');
+            if (newline != NULL) {
+                *newline = '\0';
+            }
+
+            // Allocate memory for the link and copy it
+            link = malloc(strlen(line) + 1);
+            strcpy(link, line);
+
+            // Remove "LINK : " from the link
+            char* linkPrefix = "LINK : ";
+            if (strstr(link, linkPrefix) == link) {
+                memmove(link, link + strlen(linkPrefix), strlen(link) - strlen(linkPrefix) + 1);
+            }
+
+            break;
+        }
+
+        if (strncmp(line, "NAME :", 6) == 0) {
+            // Found the name line, check if it matches the search name
+            char* nameStart = strchr(line, ':');
+            if (nameStart != NULL) {
+                // Skip the ':' and any leading whitespace
+                nameStart++;
+                while (*nameStart == ' ') {
+                    nameStart++;
+                }
+
+                // Remove the trailing newline character, if present
+                char* newline = strchr(nameStart, '\n');
+                if (newline != NULL) {
+                    *newline = '\0';
+                }
+
+                // Check if the name matches the search name
+                if (strcmp(nameStart, searchName) == 0) {
+                    foundName = 1;
+                }
+            }
+        }
+    }
+
+    fclose(file);
+    return link;
+}
 
 
 void sendRequest(GtkWidget *widget, gpointer data) {
@@ -75,6 +139,11 @@ void sendRequest(GtkWidget *widget, gpointer data) {
     GtkWidget *apiResult = gtk_window_new(GTK_WINDOW_TOPLEVEL); 
     GtkWidget *apiResultDisplay;
 
+    char *tmpRequestCheck = isSaved((char *)request);
+    if (tmpRequestCheck != NULL) {
+        request = tmpRequestCheck;
+    }
+    printf("Request : %s\n",(char *)request);
     //Window Setting
     gtk_window_set_title(GTK_WINDOW(apiResult), "Resultat de la requete");
     gtk_window_set_default_size(GTK_WINDOW(apiResult), 400, 300);
@@ -183,7 +252,8 @@ void displaySaveSuccess() {
     gtk_widget_show_all(successWindow);
 
     // Fermeture de la fenêtre après 3 secondes
-    g_timeout_add(3000, G_SOURCE_FUNC(gtk_widget_destroy), successWindow);
+     g_timeout_add_seconds(3, G_SOURCE_FUNC(closeSuccessWindow), successWindow);
+
 }
 
 void saveApi(GtkWidget *widget,gpointer data) {
@@ -234,6 +304,7 @@ void displaySaveWindow() {
     g_signal_connect(G_OBJECT(saveWindow), "destroy", G_CALLBACK(on_window_destroy), NULL);
     g_signal_connect(G_OBJECT(saveButton), "clicked", G_CALLBACK(saveApi), apiSave);
     g_signal_connect(G_OBJECT(closeButton), "clicked", G_CALLBACK(closeWindow), saveWindow);
+
     
     gtk_widget_show_all(saveWindow);
 
