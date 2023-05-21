@@ -46,7 +46,7 @@ int write_callback(void *contents, size_t size, size_t nmemb, char **response) {
 
 
 
-void on_button_clicked(GtkWidget *widget, gpointer data) {
+void sendRequest(GtkWidget *widget, gpointer data) {
     //Declarations
     CURL *curl = curl_easy_init();
     CURLcode res;
@@ -109,51 +109,77 @@ void on_window_destroy(GtkWidget *widget, gpointer data) {
     gtk_main_quit(); // Arrête l'exécution de la boucle principale GTK
 }
 
-int main(int argc, char **argv) {
-    gtk_init(&argc, &argv);
+void displayRequestWindow(gpointer data) {
 
-    GtkWidget *window;
+    GtkWidget *requestWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    GtkWidget *requestBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    GtkWidget *requestLabel = gtk_label_new("Requete");
     GtkWidget *requestButton;
     GtkWidget *methodLabel;
     apiRequest *apiStruct = malloc(sizeof(apiRequest));
 
-    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "requeteur d'api C");
-    gtk_window_set_default_size(GTK_WINDOW(window), 300, 300);
+    gtk_window_set_title(GTK_WINDOW(requestWindow), "requeteur d'api C");
+    gtk_window_set_default_size(GTK_WINDOW(requestWindow), 300, 300);
 
     apiStruct->method = gtk_combo_box_text_new();
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(apiStruct->method), "GET");
     gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(apiStruct->method), "POST");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(apiStruct->method), "PUT");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(apiStruct->method), "DELETE");
-
-    methodLabel = gtk_label_new("Méthode de la requete");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(apiStruct->method), 0);
 
     apiStruct->api = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(apiStruct->api), "Nom de l'API ou lien");
-
+    gtk_entry_set_text(GTK_ENTRY(apiStruct->api), "Entrez le nom ou le lien de l'api ICI...");
     apiStruct->apiArguments = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(apiStruct->apiArguments), "Arguments de l'API");
+    gtk_entry_set_text(GTK_ENTRY(apiStruct->apiArguments), "Entrez les arguments de la requete ICI...");
 
-    requestButton = gtk_button_new_with_label("Lancez la requete");
+    requestButton = gtk_button_new_with_label("Envoyer la requete");
 
-    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-    gtk_container_add(GTK_CONTAINER(box), methodLabel);
-    gtk_container_add(GTK_CONTAINER(box), apiStruct->method);
-    gtk_container_add(GTK_CONTAINER(box), apiStruct->api);
-    gtk_container_add(GTK_CONTAINER(box), apiStruct->apiArguments);
-    gtk_container_add(GTK_CONTAINER(box), requestButton);
+    gtk_box_pack_start(GTK_BOX(requestBox), requestLabel, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(requestBox), apiStruct->method, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(requestBox), apiStruct->api, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(requestBox), apiStruct->apiArguments, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(requestBox), requestButton, TRUE, TRUE, 0);
 
+    gtk_container_add(GTK_CONTAINER(requestWindow), requestBox);
 
-    gtk_container_add(GTK_CONTAINER(window), box);
+    g_signal_connect(G_OBJECT(requestWindow), "destroy", G_CALLBACK(on_window_destroy), NULL);
+    g_signal_connect(G_OBJECT(requestButton), "clicked", G_CALLBACK(sendRequest), apiStruct);
 
-    g_signal_connect(requestButton, "clicked", G_CALLBACK(on_button_clicked), apiStruct);
-    g_signal_connect(window, "destroy", G_CALLBACK(on_window_destroy), NULL);
+    gtk_widget_show_all(requestWindow);
 
-    gtk_widget_show_all(window);
     gtk_main();
 
     free(apiStruct);
+}
+
+int main(int argc, char **argv) {
+    gtk_init(&argc, &argv);
+
+    GtkWidget *window;
+    GtkWidget *box;
+    GtkWidget *requestBtn;
+    GtkWidget *saveButton;
+
+    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    requestBtn = gtk_button_new_with_label("Faire une requete");
+    saveButton = gtk_button_new_with_label("Sauvegarder une API");
+
+    gtk_window_set_title(GTK_WINDOW(window), "requeteur d'api C");
+    gtk_window_set_default_size(GTK_WINDOW(window), 300, 300);
+
+    gtk_box_pack_start(GTK_BOX(box), requestBtn, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(box), saveButton, TRUE, TRUE, 0);
+
+    gtk_container_add(GTK_CONTAINER(window), box);
+
+    g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(on_window_destroy), NULL);
+    g_signal_connect(G_OBJECT(requestBtn), "clicked", G_CALLBACK(displayRequestWindow), NULL);
+
+    gtk_widget_show_all(window);
+
+    gtk_main();
+
+
 
     return 0;
 }
