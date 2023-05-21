@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 #include <jansson.h>
+#include <unistd.h>
 
 typedef struct apiRequest apiRequest;
 
@@ -12,6 +13,22 @@ struct apiRequest {
     GtkWidget *api;
     GtkWidget *apiArguments;
 };
+
+typedef struct apiStruct apiStruct;
+
+struct apiStruct {
+    GtkWidget *name;
+    GtkWidget *url;
+};
+
+//------------------FUNCTIONS DECLARATIONS------------------//
+void on_window_destroy(GtkWidget *widget, gpointer data) {
+    gtk_main_quit(); // Arrête l'exécution de la boucle principale GTK
+}
+void closeWindow(GtkWidget *widget, gpointer window) {
+    gtk_widget_destroy(GTK_WIDGET(window));
+}
+//-------------CURL AND API REQUEST FUNCTIONS----------------//
 
 //fonction de gestion de la réponse
 int write_callback(void *contents, size_t size, size_t nmemb, char **response) {
@@ -105,9 +122,6 @@ void sendRequest(GtkWidget *widget, gpointer data) {
     free(response);
   }
 }
-void on_window_destroy(GtkWidget *widget, gpointer data) {
-    gtk_main_quit(); // Arrête l'exécution de la boucle principale GTK
-}
 
 void displayRequestWindow(gpointer data) {
 
@@ -150,7 +164,85 @@ void displayRequestWindow(gpointer data) {
 
     free(apiStruct);
 }
+//-------------CURL AND API REQUEST FUNCTION END----------------//
 
+//-------------SAVE API FUNCTION--------------------//
+void displaySaveSuccess() {
+    GtkWidget *successWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    GtkWidget *successLabel = gtk_label_new("Ajout réussi ! Vous pouvez désormais envoyer une requête en entrant le nom à la place du lien.");
+    GtkWidget *successBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+
+    gtk_window_set_title(GTK_WINDOW(successWindow), "Succès");
+    gtk_window_set_default_size(GTK_WINDOW(successWindow), 400, 200);
+    gtk_label_set_line_wrap(GTK_LABEL(successLabel), TRUE);
+
+    gtk_box_pack_start(GTK_BOX(successBox), successLabel, TRUE, TRUE, 0);
+    gtk_container_add(GTK_CONTAINER(successWindow), successBox);
+
+    // Affichage de la fenêtre
+    gtk_widget_show_all(successWindow);
+
+    // Fermeture de la fenêtre après 3 secondes
+    g_timeout_add(3000, G_SOURCE_FUNC(gtk_widget_destroy), successWindow);
+}
+
+void saveApi(GtkWidget *widget,gpointer data) {
+    FILE *file;
+    char *filename = ".apiSave";
+    apiStruct *apiSave = (apiStruct *)data;
+    const gchar *name = gtk_entry_get_text(GTK_ENTRY(apiSave->name));
+    const gchar *url = gtk_entry_get_text(GTK_ENTRY(apiSave->url));
+
+    file = fopen(filename, "a+");
+    if (file == NULL) {
+        fprintf(stderr, "Failed to open file for writing.\n");
+        return;
+    }
+
+    fprintf(file, "NAME : %s\n", (char *)name);
+    fprintf(file, "LINK : %s\n", (char *)url);
+    fprintf(file, "--------------\n");
+
+    fclose(file);
+
+    displaySaveSuccess();
+}
+
+
+void displaySaveWindow() {
+    GtkWidget *saveWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    GtkWidget *saveBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    apiStruct *apiSave = malloc(sizeof(apiStruct));
+    apiSave->name = gtk_entry_new();
+    apiSave->url = gtk_entry_new();
+    GtkWidget *saveButton = gtk_button_new_with_label("Sauvegarder l'API");
+    GtkWidget *closeButton = gtk_button_new_with_label("Fermer");
+
+    gtk_window_set_title(GTK_WINDOW(saveWindow), "Sauvegarder une API");
+    gtk_window_set_default_size(GTK_WINDOW(saveWindow), 700, 300);
+
+    gtk_entry_set_text(GTK_ENTRY(apiSave->name), "Entrez le nom de l'API ICI...");
+    gtk_entry_set_text(GTK_ENTRY(apiSave->url), "Entrez le lien de l'API ICI... (ex: https://api.github.com et précisez si il y a des arguments notament pour la clé d'API)");
+
+    gtk_box_pack_start(GTK_BOX(saveBox), apiSave->name, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(saveBox), apiSave->url, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(saveBox), saveButton, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(saveBox), closeButton, TRUE, TRUE, 0);
+
+    gtk_container_add(GTK_CONTAINER(saveWindow), saveBox);
+
+    g_signal_connect(G_OBJECT(saveWindow), "destroy", G_CALLBACK(on_window_destroy), NULL);
+    g_signal_connect(G_OBJECT(saveButton), "clicked", G_CALLBACK(saveApi), apiSave);
+    g_signal_connect(G_OBJECT(closeButton), "clicked", G_CALLBACK(closeWindow), saveWindow);
+    
+    gtk_widget_show_all(saveWindow);
+
+    gtk_main();
+
+}
+
+//-------------SAVE API FUNCTION END----------------//
+//-------------MAIN FUNCTION----------------//
 int main(int argc, char **argv) {
     gtk_init(&argc, &argv);
 
@@ -174,6 +266,7 @@ int main(int argc, char **argv) {
 
     g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(on_window_destroy), NULL);
     g_signal_connect(G_OBJECT(requestBtn), "clicked", G_CALLBACK(displayRequestWindow), NULL);
+    g_signal_connect(G_OBJECT(saveButton), "clicked", G_CALLBACK(displaySaveWindow), NULL);
 
     gtk_widget_show_all(window);
 
