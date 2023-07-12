@@ -146,7 +146,7 @@ void sendRequest(GtkWidget *widget, gpointer data) {
     printf("Request : %s\n",(char *)request);
     //Window Setting
     gtk_window_set_title(GTK_WINDOW(apiResult), "Resultat de la requete");
-    gtk_window_set_default_size(GTK_WINDOW(apiResult), 400, 300);
+    gtk_window_set_default_size(GTK_WINDOW(apiResult), 1000, 1000);
     //Process request
     response = malloc(sizeof(char));
 

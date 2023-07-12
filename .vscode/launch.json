@@ -6,8 +6,8 @@
       "type": "lldb",
       "request": "launch",
       "args": [],
-      "cwd": "/Applications/MAMP/htdocs/Test_requeteur/Test",
-      "program": "/Applications/MAMP/htdocs/Test_requeteur/Test/build/Debug/outDebug"
+      "cwd": "/Applications/MAMP/htdocs/Test_requeteur/Requeteur",
+      "program": "/Applications/MAMP/htdocs/Test_requeteur/Requeteur/build/Debug/outDebug"
     }
   ]
 }
